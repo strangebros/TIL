@@ -51,8 +51,39 @@ FAILURE: Build failed with an exception.
 
 ### 2. 가상 머신 스택 & 네이티브 메서드 스택 오버플로
 
+
 ### 3. 메서드 영역 & 런타임 상수 풀 오버플로
 
 ### 4. 네이티브 다이렉트 메모리 오버플로
+* 다이렉트 메모리의 용량은 `-XX:MaxDirectMemorySize` 매개변수로 설정
+  * 따로 설정하지 않으면, `-Xmx` 로 설정한 자바 힙의 최댓값과 같음
+* `Unsafe` 를 이용하면 할당할 수 없는 크기를 계산해 오버플로를 수동으로 일으킬 수 있음
+
+* 예제 코드
+  * (리플렉션을 통해 Unsafe 인스턴스를 직접 얻어 메모리를 할당받는다)
+```java
+public class DirectMemoryOOM {
+    private static final int _1MB = 1024 * 1024;
+
+    public static void main(String[] args) throws Exception {
+        Field unsafeField = Unsafe.class.getDeclaredFields()[0];
+        unsafeField.setAccessible(true);
+        Unsafe unsafe = (Unsafe) unsafeField.get(null);
+        while (true) {
+            unsafe.allocateMemory(_1MB);
+        }
+    }
+}
+```
+
+* 실행 결과
+```bash
+Exception in thread "main" java.lang.OutOfMemoryError: Unable to allocate 1048576 bytes
+    at java.base/jdk....
+    ...
+```
+
+* 다이렉트 메모리에서 발생한 OOM의 특징으로는, 힙 덤프에서는 이상한 점을 찾기가 어렵다는 것.
+  * 만약 OOM이 발생했는데 힙 덤프 파일이 매우 작거나, 특히 NIO 등을 통해 다이렉트 메모리를 사용한 경우에는, 이 유형의 OOM을 의심해볼 수 있다.
 
 ## heapdump 파일 분석 방법
