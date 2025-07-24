@@ -53,6 +53,47 @@ FAILURE: Build failed with an exception.
 
 
 ### 3. 메서드 영역 & 런타임 상수 풀 오버플로
+* 런타임 상수 풀은 메서드 영역에 속함
+  * 두 영역의 OOM 테스트는 함께 수행할 수 있다
+  * 핫스팟은 JDK 7 부터 영구 세대를 없애기 시작, JDK 8 부터는 메타스페이스로 완전히 대체
+* 가비지 컬렉터가 '클래스' 를 회수하는 것은 객체에 비해 훨씬 까다롭기 때문에, 메모리 영역의 OOM 도 꽤 자주 발생
+  * 특히, 동적으로 클래스를 자주 생성하는 (CGLib, JSP, OSGi 애플리케이션) 경우에는 조심해야 함
+
+* 예제 코드
+```java
+public class JavaMethodAreaOOM {
+	public static void main(String[] args) {
+		while (true) {
+			Enhancer enhancer = new Enhancer();
+			enhancer.setSuperclass(OOMOject.class);
+			enhancer.setUseCache(false)
+			enhancer.setCallback(new MethodInterceptor() {
+				public Object intercept(Object obj, Method method,
+					Object[] args, MethodProxy proxy) throw Throable {
+						return proxy.invokeSuper(obj, args);
+					}
+			});	
+			enhancer.create();
+		}
+    }
+		
+    static class OOMObject {
+    }
+}
+```
+
+* 실행 결과
+1. JDK 7
+```
+Exception in thread "main"
+Exception: java.lang.OutOfMemoryError thrown from the UncaughtExceptionHadler in thread "main"
+```
+
+2. JDK 15
+```
+Exception in thread "main" java.lang.OutOfMemoryError: Metaspace
+    at java.base.,,,
+```
 
 ### 4. 네이티브 다이렉트 메모리 오버플로
 * 다이렉트 메모리의 용량은 `-XX:MaxDirectMemorySize` 매개변수로 설정
