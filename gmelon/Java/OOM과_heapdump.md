@@ -54,6 +54,112 @@ FAILURE: Build failed with an exception.
 * 따라서, 스레드 생성 시 메모리가 부족하여 OOM이 발생하는 케이스를 제외하면, 이미 실행 중인 쓰레드에서 OOM 이 발생하는 일은 없음
   * 대신 스택 용량이 부족하여 StackOverflowError 가 발생
 
+#### 단일 쓰레드 - StackOverFlow 예시
+* 즉, 단일 쓰레드 환경에서는, 아무리 스택 용량을 많이 사용하려고 해도 OOM 이 아닌 StackOverflowError가 발생하게 된다
+* 예제 코드
+```java
+public class JavaVMStackSOF_2 {
+    private static int stackLength = 0;
+
+    public static void test() {
+        long unused1, unused2, unused3, unused4, unused5,
+            unused6, unused7, unused8, unused9, unused10,
+            unused11, unused12, unused13, unused14, unused15,
+            unused16, unused17, unused18, unused19, unused20,
+            unused21, unused22, unused23, unused24, unused25,
+            unused26, unused27, unused28, unused29, unused30,
+            unused31, unused32, unused33, unused34, unused35,
+            unused36, unused37, unused38, unused39, unused40,
+            unused41, unused42, unused43, unused44, unused45,
+            unused46, unused47, unused48, unused49, unused50,
+            unused51, unused52, unused53, unused54, unused55,
+            unused56, unused57, unused58, unused59, unused60,
+            unused61, unused62, unused63, unused64, unused65,
+            unused66, unused67, unused68, unused69, unused70,
+            unused71, unused72, unused73, unused74, unused75,
+            unused76, unused77, unused78, unused79, unused80,
+            unused81, unused82, unused83, unused84, unused85,
+            unused86, unused87, unused88, unused89, unused90,
+            unused91, unused92, unused93, unused94, unused95,
+            unused96, unused97, unused98, unused99, unused100;
+
+        stackLength++;
+        test();
+
+        unused1 = unused2 = unused3 = unused4 = unused5 = unused6 = unused7
+            = unused8 = unused9 = unused10 = unused11 = unused12 = unused13
+            = unused14 = unused15 = unused16 = unused17 = unused18 = unused19
+            = unused20 = unused21 = unused22 = unused23 = unused24 = unused25
+            = unused26 = unused27 = unused28 = unused29 = unused30 = unused31
+            = unused32 = unused33 = unused34 = unused35 = unused36 = unused37
+            = unused38 = unused39 = unused40 = unused41 = unused42 = unused43
+            = unused44 = unused45 = unused46 = unused47 = unused48 = unused49
+            = unused50 = unused51 = unused52 = unused53 = unused54 = unused55
+            = unused56 = unused57 = unused58 = unused59 = unused60 = unused61
+            = unused62 = unused63 = unused64 = unused65 = unused66 = unused67
+            = unused68 = unused69 = unused70 = unused71 = unused72 = unused73
+            = unused74 = unused75 = unused76 = unused77 = unused78 = unused79
+            = unused80 = unused81 = unused82 = unused83 = unused84 = unused85
+            = unused86 = unused87 = unused88 = unused89 = unused90 = unused91
+            = unused92 = unused93 = unused94 = unused95 = unused96 = unused97
+            = unused98 = unused99 = unused100 = 0;
+    }
+
+    public static void main(String[] args) {
+        try {
+            test();
+        } catch (Error e) {
+            System.out.println("stack length:" + stackLength);
+            throw e;
+        }
+    }
+}
+```
+
+* 실행 결과
+```
+stack length: 5063
+Exception in thread "main" java.lang.StackOverflowError
+    at ... (L29)
+    ...
+```
+
+#### 다중 쓰레드 - OOM 예시
+* 반면, 다중 쓰레드 환경에서 쓰레드를 계속해서 생성하면 OOM 이 발생한다
+* OS 에서 각 프로세스에 할당하는 메모리 크기는 제한적인데,
+  * 계속해서 쓰레드를 생성하면 각 쓰레드의 스택이 차지하는 메모리가 프로세스의 메모리를 넘어서는 케이스가 생기기 때문이다
+  * `-Xss` 를 크게 잡을 수록 쉽게 발생함
+* 예제 코드
+```java
+// -Xss2M (32bit os 기준)
+public class JavaVMStackOOM {
+
+    private void dontStop() {
+        while (true) {}
+    }
+
+    public void stackLeakByThread() {
+        while(true) {
+            Thread thread = new Thread(this::dontStop);
+            thread.start();
+        }
+    }
+
+    public static void main(String[] args) throws Throwable {
+        JavaVMStackOOM oom = new JavaVMStackOOM();
+        oom.stackLeakByThread();
+    }
+
+}
+```
+
+* 실행 결과
+```
+Exception in thread "main" java.lang.OutOfMemoryError: unable to create native thread
+```
+* 이 케이스를 방지하기 위해선, 스택/힙의 최대 용량을 줄이면 된다
+  * 즉, 메모리 부족을 해결하기 위해 메모리의 용량을 줄이는 신기한 해결책
+
 ### 3. 메서드 영역 & 런타임 상수 풀 오버플로
 * 런타임 상수 풀은 메서드 영역에 속함
   * 두 영역의 OOM 테스트는 함께 수행할 수 있다
