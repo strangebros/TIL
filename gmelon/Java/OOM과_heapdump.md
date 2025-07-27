@@ -235,4 +235,34 @@ Exception in thread "main" java.lang.OutOfMemoryError: Unable to allocate 104857
 * 다이렉트 메모리에서 발생한 OOM의 특징으로는, 힙 덤프에서는 이상한 점을 찾기가 어렵다는 것.
   * 만약 OOM이 발생했는데 힙 덤프 파일이 매우 작거나, 특히 NIO 등을 통해 다이렉트 메모리를 사용한 경우에는, 이 유형의 OOM을 의심해볼 수 있다.
 
+## -XX:HeapDumpPath 의 작동 방식
+### 동작 원리
+1. JVM이 OutOfMemoryError를 감지하면, 내부적으로 HeapDumpOnOutOfMemoryError 플래그가 활성화되어 있는지 확인
+2. 활성화되어 있다면, HeapDumpPath에 지정된 경로로 힙덤프 파일을 생성
+3. 힙덤프 파일 생성이 완료된 후, JVM 비정상 종료
+
+### OOM 이 발생했는데도 heapdump 를 생성할 수 있는 이유는?
+
+#### 1. OOM이라도 `JVM 전체` 가 완전히 메모리가 0이 된 것은 아님
+* OOM은 JVM이 필요한 만큼의 메모리를 추가로 할당받지 못했을 때 발생
+* 즉, `특정 작업(예: 객체 생성, 배열 확장 등)` 에 필요한 메모리를 할당할 수 없을 때 예외가 발생하는 것이지, JVM 전체의 모든 메모리가 완전히 소진된 상태는 아님
+* 아직 사용 가능한(할당되지 않은) 메모리가 일부 남아 있을 수 있음
+
+#### 2. JVM의 힙덤프 생성 로직은 별도의 메모리 확보를 시도
+* JVM은 OOM이 발생하면, 내부적으로 힙덤프를 생성하기 위한 최소한의 메모리를 확보하려고 시도
+* 이 과정에서, GC(Garbage Collection)를 한 번 더 강제로 수행해서 쓸 수 있는 메모리를 최대한 확보
+* 그리고 확보된 메모리로 힙의 상태를 파일로 기록
+
+#### 3. 따라서, 힙덤프 생성에 실패할 수도 있다!
+* 만약 정말로 남은 메모리가 전혀 없다면, 힙덤프 파일 생성에 실패할 수도 있음
+```
+Dumping heap to /path/to/heapdump.hprof ...
+Unable to create /path/to/heapdump.hprof: Java heap space
+Heap dump file creation failed.
+```
+
+#### 4. OS의 메모리 <-> JVM의 힙
+* 힙덤프 파일을 생성하는 데에는 JVM 힙 외에도, OS의 파일 시스템 버퍼 등 다른 리소스가 사용됨
+* JVM이 힙 메모리 부족으로 OOM이 발생해도, OS 차원에서는 파일을 쓸 수 있는 리소스가 남아 있을 수 있음
+
 ## heapdump 파일 분석 방법
