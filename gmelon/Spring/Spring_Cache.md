@@ -11,16 +11,33 @@
 
 ## 스프링과 캐시
 > 출처
-> 1. [[Spring] 캐시(Cache) 추상화와 사용법(@Cacheable, @CachePut, @CacheEvict)](https://mangkyu.tistory.com/179)
-> 2. [[Spring] 스프링이 제공하는 Cache와 CacheManager 쉽고 완벽하게 이해하기](https://mangkyu.tistory.com/370)
+> 1. https://docs.spring.io/spring-boot/reference/io/caching.html
+> 2. [[Spring] 캐시(Cache) 추상화와 사용법(@Cacheable, @CachePut, @CacheEvict)](https://mangkyu.tistory.com/179)
+> 3. [[Spring] 스프링이 제공하는 Cache와 CacheManager 쉽고 완벽하게 이해하기](https://mangkyu.tistory.com/370)
 
 ### AOP와 추상화
+스프링 답게, 스프링 캐시도 AOP 와 추상화 기술이 적용되어 있다.
 
-### @Cacheable, @CachePut, @CacheEvict
+때문에 비지니스 로직에 영향을 최소화할 수 있고,
+사용하는 캐시 구현체가 변경되어도 설정을 제외한 나머지 코드 수정이 불필요하다.
 
-### Cache 와 CacheManager 의 차이점
+### @Cacheable
+```java
+@Component
+public class MyMathService {
 
-### Cache
+	@Cacheable("piDecimals")
+	public int computePiDecimal(int precision) {
+		...
+	}
 
-### CacheManager
+}
+```
+
+위와 같이 메서드에 `@Cacheable("piDecimals")` 을 선언해주면 해당 메서드의 반환 값이 `piDecimals` 라는 이름으로 캐싱된다.
+`precision` 이라는 파라미터에 동일한 값으로 요청이 들어오면, `piDecimals` 이름을 가진 캐시에서 해당 파라미터 값을 key 로 갖는 value 가 있는지 검사 후 있으면 캐시를 반환하게 된다.
+
+스프링은 별다른 설정을 하지 않으면 ConcurrentHashMap 을 사용하는 CacheManager 를 사용한다고 한다. (프로덕션에서는 당연히 사용하면 안 된다)
+
+### Cache 와 CacheManager
 
