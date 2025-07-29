@@ -159,3 +159,79 @@ Oracle의 PL/SQL과 비슷한 개념이지만, 문법과 동작이 다르다고 
 | 일반 SQL(MySQL 등) | `BEGIN;` | 트랜잭션 시작 |
 | PL/SQL, T-SQL | `BEGIN` | 코드 블록 시작 (프로그래밍적 의미) |
 
+<br />
+
+## `COMMIT`과 `ROLLBACK` 키워드
+
+이어서, 트랜잭션의 핵심 동작인 `COMMIT`과 `ROLLBACK`에 대해서 알아보려고 합니다.
+
+### `COMMIT`의 정의
+
+- `COMMIT`은 지금까지 수행한 모든 변경 작업을 **DB에 영구적으로 반영(저장)** 하는 명령어입니다.
+- 즉, `COMMIT`을 하면 DB는 "진짜로 바뀐 것"으로 인정합니다.
+
+#### 사용 예시
+
+```sql
+BEGIN;
+
+UPDATE users SET balance = balance - 100 WHERE id = 1;
+
+COMMIT;
+-- 이 시점 부터는 다시 돌릴 수 없음
+```
+
+### `ROLLBACK`의 정의
+
+- `ROLLBACK`은 지금까지 수행한 변경 작업을 **모두 취소**하고, 트랜잭션 시작 전 상태로 **되돌리는** 명령어입니다.
+- 즉, DB에 "없던 일로" 만든다고 생각하면 됩니다.
+
+#### 사용 예시
+
+```sql
+BEGIN;
+
+UPDATE users SET balance - 100 WHERE id = 1;
+
+ROLLBACK;
+-- 이 작업은 무효 처리됨(balance 변화 없음)
+```
+
+### `COMMIT` / `ROLLBACK` 작동 흐름
+
+- 아래와 같은 잔액 이체 sql문이 있다고 가정해 봅시다.
+
+```sql
+BEGIN;
+
+UPDATE account SET balance = balance - 100 WHERE name = 'A';
+UPDATE account SET balance = balance + 100 WHERE name = 'B';
+
+-- 모두 성공하면
+COMMIT;
+-- 또는 중간에 오류가 나면
+-- ROLLBACK;
+```
+
+- 해당 sql문의 시점 별 상황은 다음과 같습니다.
+
+| 시점 | A잔액 | B잔액 | 설명 |
+| --- | --- | --- | --- |
+| 트랜잭션 이전 | 1000 | 500 | 초기 상태 |
+| A에서 빼고 -> B에게 추가 | 900 | 600 | 변경 완료(아직 COMMIT 안됨) |
+| ROLLBACK | 1000 | 500 | 변경 사항 모두 취소됨 |
+| COMMIT | 900 | 600 | 변경 사항 DB에 저장됨 |
+
+### `COMMIT` 과 `ROLLBACK`이 필요한 이유
+
+1. 데이터 무결성 보장
+  -> 여러 변경이 있을 때 일부만 반영되면 DB가 망가짐
+  -> 예: A잔액 빠졌는데 B한테 입금 실패하는 경우가 생기면, DB의 무결성이 깨짐
+2. 테스트 후 반영 또는 취소 가능
+  -> 예: `UPDATE`로 10만 건 수정해보고, 조건 이상하면 `ROLLBACK`으로 되돌리기
+3. 에러 발생 시 자동 복구
+  -> 예: 중간에 네트워크 오류, 키 충돌 등 생겼을 때 전체 취소 가능
+
+
+
+
