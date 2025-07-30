@@ -40,4 +40,86 @@ public class MyMathService {
 스프링은 별다른 설정을 하지 않으면 ConcurrentHashMap 을 사용하는 CacheManager 를 사용한다고 한다. (프로덕션에서는 당연히 사용하면 안 된다)
 
 ### Cache 와 CacheManager
+계속 보다보니 Cache 와 CacheManager 가 되게 헷갈렸다.
 
+둘다 스프링에서 만들어둔 인터페이스인데,
+먼저 Cache 는
+```java
+public interface Cache {
+
+	@Nullable
+	ValueWrapper get(Object key);
+
+    void put(Object key, @Nullable Object value);
+
+    void evict(Object key);
+
+    ...
+
+}
+```
+
+와 같이 되어있고, CacheManager 는
+
+```java
+public interface CacheManager {
+
+	@Nullable
+	Cache getCache(String name);
+
+	Collection<String> getCacheNames();
+
+}
+```
+
+와 같이 되어 있다.
+
+개념만 들었을 때는 되게 헷갈렸는데, 인터페이스를 보면 구조가 명확해진다. 앞서 `@Cacheable("piDecimals")` 와 같이 간단하게 캐시의 이름을 지정할 수 있다고 했는데 여기서 `piDecimals` 가 하나의 `Cache` 가 된다. 그 안에 어떠한 방식으로든 `key-value` 의 데이터 쌍이 저장되는 구조이다.
+
+반면 CacheManager 는 이러한 캐시들의 집합을 '어떠한 방식으로든' 관리해주는 매니저에 대한 인터페이스이다. 따라서 위 예시의 경우 `piDecimals` 라는 이름의 캐시를 얻고자 하면 `CacheManager.getCache("piDecimals")` 과 같이 하면 될 것이다.
+
+CacheManager 는 아래와 같은 구현체들을 갖고,
+<img width="459" height="296" alt="Image" src="https://github.com/user-attachments/assets/078e18b6-e98f-4aad-96be-5acdf4537fb8" />
+
+Cache 는 아래와 같은 구현체들을 갖는다.
+<img width="357" height="236" alt="Image" src="https://github.com/user-attachments/assets/0bb94526-1a3b-47c3-ad8a-c970fc72c693" />
+
+### ConcurrentMapCache
+아무런 동작을 하지 않는 NoOpCache 를 제외하고 가장 단순해 보이는 ConcurrentMapCache 의 코드 일부를 확인해보자.
+
+```java
+public class ConcurrentMapCache extends AbstractValueAdaptingCache {
+
+	private final String name;
+
+	private final ConcurrentMap<Object, Object> store;
+
+    @SuppressWarnings("unchecked")
+    @Override
+    @Nullable
+    public <T> T get(Object key, Callable<T> valueLoader) {
+        return (T) fromStoreValue(this.store.computeIfAbsent(key, k -> {
+            try {
+                return toStoreValue(valueLoader.call());
+            }
+            catch (Throwable ex) {
+                throw new ValueRetrievalException(key, valueLoader, ex);
+            }
+        }));
+    }
+
+    ...
+
+}
+```
+
+먼저 `name` 필드를 통해 캐시의 이름을 표현한다. 또한 내부에 `store` 이란 이름의 ConcurrentMap 을 가져 이를 통해 `key-value` 꼴의 데이터를 관리하는 것을 알 수 있다.
+
+```java
+@Override
+public void evict(Object key) {
+    this.store.remove(key);
+}
+```
+
+캐시를 무효화하는 `evict()` 메소드의 경우도 살펴보면 `store` 맵에 주어진 key 에 해당하는 값을 삭제하는 것을 확인할 수 있다.
