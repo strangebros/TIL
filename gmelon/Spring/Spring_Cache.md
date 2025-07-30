@@ -79,9 +79,11 @@ public interface CacheManager {
 반면 CacheManager 는 이러한 캐시들의 집합을 '어떠한 방식으로든' 관리해주는 매니저에 대한 인터페이스이다. 따라서 위 예시의 경우 `piDecimals` 라는 이름의 캐시를 얻고자 하면 `CacheManager.getCache("piDecimals")` 과 같이 하면 될 것이다.
 
 CacheManager 는 아래와 같은 구현체들을 갖고,
+
 <img width="459" height="296" alt="Image" src="https://github.com/user-attachments/assets/078e18b6-e98f-4aad-96be-5acdf4537fb8" />
 
 Cache 는 아래와 같은 구현체들을 갖는다.
+
 <img width="357" height="236" alt="Image" src="https://github.com/user-attachments/assets/0bb94526-1a3b-47c3-ad8a-c970fc72c693" />
 
 ### ConcurrentMapCache
