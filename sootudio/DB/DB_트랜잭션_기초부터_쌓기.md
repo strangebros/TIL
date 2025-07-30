@@ -232,6 +232,44 @@ COMMIT;
 3. 에러 발생 시 자동 복구
   -> 예: 중간에 네트워크 오류, 키 충돌 등 생겼을 때 전체 취소 가능
 
+### 실무에서 `COMMIT`과 `ROLLBACK`을 사용하는 대표적인 경우
+
+| 상황 | 처리 방식 |
+| --- | --- |
+| 여러 테이블이 관련된 변경(위의 계좌이체 예시 같은...) | 한꺼번에 COMMIT, 실패 시 ROLLBACK |
+| 파일 업로드 + DB 반영 같이 처리할 때 | DB 트랜잭션은 ROLLBACK으로 취소 |
+| 운영에서 대량 UPDATE 할 때 | `BEGIN -> UPDATE -> SELECT -> 확인 -> COMMIT or ROLLBACK` |
+| 테스트용 임시 작업 | `ROLLBACK`으로 되돌림 |
+
+### `AUTO-COMMIT`에 대하여
+
+> 일부 DB는 `BEGIN`을 쓰지 않아도 각 쿼리마다 **자동으로 COMMIT**이 된다고 합니다.
+
+> 이것을 `AUTO-COMMIT`이라고 부릅니다.
+
+| DBMS 종류 | AUTO-COMMIT 기본값 |
+| --- | --- |
+| MySQL | 1(켜짐) |
+| PostgreSQL | 1(켜짐) |
+| Oracle | 1(켜짐, 단 DML 시작 시 트랜잭션 시작됨 |
+
+이러한 `AUTO-COMMIT`은 작업을 하나하나 `COMMIT` 하지 않아도 된다는 편리함이 있지만, 위험한 경우도 있다고 합니다.
+
+```sql
+UPDATE salaries SET amount = amount * 10;
+-- 잘못 실행하면 바로 COMMIT 됨
+-- WHERE 절도 없어서 모든 데이터에 대해서 적용됨
+```
+
+- 위의 상황과 같은 경우에서, `AUTO-COMMIT`이 적용된다면, 되돌릴 수 없습니다.
+- 그래서 실무에서는 명시적으로 `BEGIN;`으로 시작하고, 꼭 수동으로 `COMMIT` 또는 `ROLLBACK` 처리하는 습관이 중요합니다.
+
+`AUTO-COMMIT`을 해제하는 방법은 크게 두 가지가 있다고 알고 있습니다.
+1. DB의 세션을 키고, 직접 `AUTO-COMMIT` 설정을 0으로 바꿔주는 방법.(단, 이렇게 하면 새로운 세션에는 적용이 되지 않습니다.)
+2. DB IDE등의 '시작 스크립트'기능(프로그램마다 명칭 다를 수 있음)을 통해 프로그램을 실행시킬 때마다 자동으로 `AUTO-COMMIT` 기능을 적용시키는 방법.
+
+
+
 
 
 
