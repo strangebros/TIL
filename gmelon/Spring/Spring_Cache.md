@@ -125,3 +125,9 @@ public void evict(Object key) {
 ```
 
 캐시를 무효화하는 `evict()` 메소드의 경우도 살펴보면 `store` 맵에 주어진 key 에 해당하는 값을 삭제하는 것을 확인할 수 있다.
+
+### RedisCacheManager
+#### 개요
+#### RedisCacheWriter
+#### RedisCacheConfiguration
+#### Builder
