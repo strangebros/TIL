@@ -128,6 +128,11 @@ public void evict(Object key) {
 
 ### RedisCacheManager
 #### 개요
+`CacheManager` 의 구현체 중 하나로, 마찬가지로 `Cache` 의 구현체 중 하나인 `RedisCache` 를 지원하는 캐시 매니저이다.
+스프링이 추상화된 인터페이스를 제공하기 때문에 사용하는 입장에서는 다른 캐시 매니저를 사용할 때처럼 `@CachePut` 등의 어노테이션으로 조작하거나, `CacheManager.get()` 와 같은 메서드를 동일하게 사용할 수 있다.
+
 #### RedisCacheWriter
+
+
 #### RedisCacheConfiguration
 #### Builder
