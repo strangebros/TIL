@@ -268,6 +268,69 @@ UPDATE salaries SET amount = amount * 10;
 1. DB의 세션을 키고, 직접 `AUTO-COMMIT` 설정을 0으로 바꿔주는 방법.(단, 이렇게 하면 새로운 세션에는 적용이 되지 않습니다.)
 2. DB IDE등의 '시작 스크립트'기능(프로그램마다 명칭 다를 수 있음)을 통해 프로그램을 실행시킬 때마다 자동으로 `AUTO-COMMIT` 기능을 적용시키는 방법.
 
+## SAVEPOINT
+
+### 개념
+
+- `SAVEPOINT`는 트랜잭션 도중에 일부 작업만 되돌리고, 나머지는 유지하고 싶을 때 사용합니다.
+- 게임에서의 중간 저장 지점(보통 그냥 세이브포인트라고 부르죠? ㅋㅋ)를 생각하면 이해하기 쉽습니다.
+
+#### 기본 구조
+
+- 아래는 `SAVEPOINT`를 사용하는 기본 구조입니다.
+
+```sql
+BEGIN;
+
+-- 트랜잭션 작업 1
+UPDATE account SET balance = balance - 100 WHERE name = 'A';
+
+SAVEPOINT sp1; -- 여기까지 저장
+
+-- 트랜잭션 작업 2
+UPDATE account SET balance = balance + 100 WHERE name = 'B';
+
+ROLLBACK TO sp1; -- 두 번째 작업은 취소, 첫 번째는 유지
+
+COMMIT; -- 트랜잭션 작업 1만 DB에 반영
+
+```
+
+#### 주요 키워드 정리 
+
+| 키워드 | 설명 |
+| --- | --- |
+| `SAVEPOINT 세이브포인트명` | 트랜잭션 중간 지점 설정 |
+| `ROLLBACK TO 세이브포인트명` | 해당 지점까지만 되돌림(`SAVEPOINT` 이후 작업만 취소됨)
+| `RELEASE SAVEPOINT 세이브포인트명` | 저장했던 지점을 명시적으로 제거 |
+| `COMMIT` | 전체 트랜잭션을 확정(SAVEPOINT도 함께 사라짐) |
+
+### 실전 사용
+
+#### SAVEPOINT가 있을 때 동작 순서 예시
+
+- 위의 '기본 구조' 코드와 유사한 부분이 있지만, 여러개의 `SAVEPOINT`를 사용할 수 있는 예시 정도로 보면 될 것 같습니다.
+
+```sql
+BEGIN;
+
+INSERT INTO orders VALUES(1, '상품'); -- 주문 추가
+SAVEPOINT s1;
+
+INSERT INTO payments VALUES(1, '카드', 100); -- 결재 내역
+SAVEPOINT s2;
+
+UPDATE inventory SET stock = stock - 1 -- 재고 차감 실패
+  WHERE item = '상품1';
+-- 예: 재고 부족 오류 발생
+
+ROLLBACK TO s1; -- 결제 내역과 재고 차감만 취소됨
+COMMIT;         -- 주문은 DB에 반영
+```
+
+근데 주문이 취소됐는데 주문이 DB에 반영되는게 맞나? 라는 궁금증에 대해선 내일 다루겠습니다...
+
+
 
 
 
