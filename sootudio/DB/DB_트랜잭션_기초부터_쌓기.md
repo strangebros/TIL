@@ -314,7 +314,7 @@ COMMIT; -- 트랜잭션 작업 1만 DB에 반영
 ```sql
 BEGIN;
 
-INSERT INTO orders VALUES(1, '상품'); -- 주문 추가
+INSERT INTO orders VALUES(1, '상품'); -- 장바구니 추가
 SAVEPOINT s1;
 
 INSERT INTO payments VALUES(1, '카드', 100); -- 결재 내역
@@ -325,12 +325,50 @@ UPDATE inventory SET stock = stock - 1 -- 재고 차감 실패
 -- 예: 재고 부족 오류 발생
 
 ROLLBACK TO s1; -- 결제 내역과 재고 차감만 취소됨
-COMMIT;         -- 주문은 DB에 반영
+COMMIT;         -- 장바구니 내역은 DB에 반영
 ```
 
-근데 주문이 취소됐는데 주문이 DB에 반영되는게 맞나? 라는 궁금증에 대해선 내일 다루겠습니다...
+<br />
 
+## 트랜잭션의 생애주기
 
+- 트랜잭션은 단순히 `BEGIN` -> `COMMIT/ROLLBACK`의 형태만 있는 것이 아닙니다.
+- 때문에, 트랜잭션의 전체 흐름을 명확하게 파악하는 것이 중요합니다.
+
+### 트랜잭션의 상태 흐름 요약
+
+| 상태 | 설명 |
+| --- | --- |
+| IDLE 상태 | DB와 연결되어 있음. 트랜잭션 미시작 |
+| ACTIVE 상태 | 쿼리 수행 중 |
+| COMMITTED 상태 | 트랜잭션 작업이 DB에 확정 저장됨 |
+| ROLLED BACK 상태 | 트랜잭션 작업이 되돌려짐 |
+
+- 아래에 각 상태에 대해서 자세히 알아보겠습니다.
+
+### IDLE 상태
+
+- 트랜잭션이 없는 상태
+- DB 연결은 되어 있지만, 아직 트랜잭션은 시작하지 않음
+- 또는, 이전 트랜잭션이 끝나도 IDLE 상태로 복귀합니다.
+- 이 상태에서는 SELECT 같은 읽기 작업만 가능 (쓰기 작업을 하려고 하면 자동으로 트랜잭션이 시작된다고 합니다.)
+
+### ACTIVE 상태
+
+- IDLE 상태에서 `BEGIN` 또는 `START TRANSACTION`으로 트랜잭션이 활성화된 상태입니다.
+- 이때부터는 `INSERT`, `UPDATE`, `DELETE` 등의 작업이 트랜잭션 안에 포함됩니다.
+- `SAVEPOINT`도 이 시점부터 가능합니다.
+- 단, 이 상태에서 DB에 변경된 내용은 아직 확정되지 않는다고 합니다.
+
+### COMMITTED 상태
+
+- ACTIVE 상태에서 `COMMIT`으로 트랜잭션 내의 모든 작업이 BD에 확정 저장된 상태입니다.
+- 이후 되돌릴 수 없습니다.
+
+### ROLLED BACK 상태
+
+- ACTIVE 상태에서 `ROLLBACK`으로 트랜잭션 내의 모든 작업이 되돌려진 상태입니다.
+- DB는 BEGIN 이전의 상태로 복구됩니다.
 
 
 
