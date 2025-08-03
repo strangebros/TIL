@@ -371,6 +371,141 @@ COMMIT;         -- 장바구니 내역은 DB에 반영
 - DB는 BEGIN 이전의 상태로 복구됩니다.
 
 
+<br />
+
+## JDBC / Spring에서의 트랜잭션 처리
+
+- 이제는 실무에서 Java 기반 애플리케이션이 DB 트랜잭션을 어떻게 제어하는지 알아보겠습니다.
+
+### JDBC에서의 트랜잭션 처리
+
+- JDBC는 트랜잭션을 수동으로 제어해야 합니다.
+- 따라서, 자동으로 COMMIT 되지 않도록 `setAutoCommit(false)`를 통해 먼저 꺼야 합니다.
+
+```java
+
+Connection conn = dataSource.getConnection();
+try(
+  conn.setAutoCommit(false); // 트랜잭션 시작
+
+  PreparedStatement stmt1 = conn.prepareStatement("UPDATE account SET balance = balance - 100 WHERE id = ?");
+  stmt1.setInt(1, 1);
+  stmt1.excuteUpdate();
+
+  PreparedStatement stmt2 = conn.prepareStatement("UPDATE account SET balance = balance + 100 WHERE id = ?");
+  stmt2.setInt(1, 2);
+  stmt2.executeUpdate();
+
+  conn.commit(); // 트랜잭션 확정
+} catch (Exception e) {
+  conn.rollback(); // 트랜잭션 되돌림
+} finally {
+  conn.close(); // 커넥션 정리
+}
+```
+
+---
+
+### Spring에서의 트랜잭션 처리: `@Transactional`
+
+- Spring에서는 트랜잭션을 직접 다루지 않아도 됨.
+  - 대신 메서드에 `@Transactional`만 붙이면 자동으로 BEGIN -> COMMIT/ROLLBACK이 실행된다고 합니다.
+
+```java
+@Service
+public class TransferService {
+
+  @Transactional
+  public void transferMoney(Long fromId, Long toId, int amount) {
+    accountRepository.decreaseBalance(fromId, amout); // UPDATE
+    accountRepository.increaseBalance(toId, amount); // UPDATE
+    // 예외 발생 시 자동 ROLLBACK
+  }
+}
+```
+
+- JDBC 방식을 보다가 Spring 방식을 보니까 참 간단하고 편하게 느껴집니다.
+- 이래서 Spring 쓰는구나 싶다가도, JDBC처럼 작동의 원리를 제대로 알아야 한다는 생각이 동시에 들었습니다.
+
+#### Spring 트랜잭션의 핵심 동작 방식
+
+| 시점 | 동작 |
+| --- | --- |
+| `@Transactional` 메서드 진입 | 트랜잭션 시작(`BEGIN`) |
+| 예외 없이 매서드 끝남 | `COMMIT` 자동 호출 |
+| 예외 발생 | `ROLLBACK` 자동 호출 |
+| 커넥션 | `DataSource`에서 커넥션을 가져와 바인딩 |
+
+- 이때, 내부적으로는 `TransactionInterceptor`가 처리한다고 합니다. 이 친구는 나중에 따로 다뤄보겠습니다.
+
+---
+
+### 롤백이 되는 조건: 예외 타입
+
+- 롤백이 되는 조건은, 예외 타입에 따라 결정된다고 합니다.
+
+| 예외 | 롤백 여부(기본) |
+| --- | --- |
+| `RuntimeException` / `Error` | 롤백됨 |
+| `Checked Exception` (예: `IOException`) | 롤백 안됨. 기본은 커밋됨 |
+
+- 뭔가 이상합니다. 예외가 나면 롤백이 되는 게 기본이라고 생각했는데 말이죠.
+- Spring에서는 이것을 아래와 같은 방법으로 보완할 수 있습니다.
+
+```java
+@Transactional(rollbackfor = IOEXceptiuoin.class)
+public void uploadFile() throws IOException {
+  ...
+}
+```
+
+---
+
+### 트랜잭션 전파 속성(`Propagation`)
+
+- 만약 메서드 안에서 또 다른 메서드를 호출한다고 하면, 트랜잭션은 어떻게 영향을 받을까요?
+- 이것은 트랜잭션의 전파 속성에 따라 결정됩니다.
+
+| 속성 | 설명 |
+| --- | --- |
+| `REQUIRED` | 기본값. 기존 트랜잭션 있으면 참여, 없으면 새로 시작. |
+| `REQUIRES_NEW` | 기존 트랜잭션을 중단하고 새로운 트랜잭션 시작. |
+| `NESTED` | 내부 트랜잭션 (`SAVEPOINT` 기반처럼 작동 ) |
+
+- 이것을 응용하면 다음과 같이 처리를 할 수 있습니다.
+- 로깅을 실패해도 메인 작업에 영향을 끼치지 않고 처리하고 싶을 때
+
+```java
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void logTransfer(...) {
+  ...
+}
+```
+
+---
+
+### 커넥션 풀 & 오토커밋 주의점
+
+- JDBC의 기본값은 `autoCommit = true` 입니다.
+- 때문에, 커넥션 풀에서 꺼낸 커넥션이 autoCommit 상태로 되어 있으면
+  - `@Transactional`이 작동하더라고 중간에 커밋되는 일이 생길 수 있다고 합니다.
+
+#### 실무 팁
+- HikariCP, Tomcat JDBC Pool 등 커넥션 풀 설정에서 `defaultAutoCommit = false` 설정을 확인할 필요가 있습니다.
+- SpringBoot에서는 자동으로 적절하게 조정한다고 합니다.
+
+---
+
+### 실무에서 자주 발생할 수 있는 문제 사례
+
+| 상황 | 원인 |
+| --- | --- |
+| 트랜잭션 안 썼는데 데이터가 반영됨 | autoCommit=true 상태 |
+| 예외가 발생했는데 ROLLBACK 안 됨 | checked exception (rollbackFor 누락) |
+| 트랜잭션 안에 여러 메서드 있는데 rollback 안됨 | 내부 메서드가 같은 클래스에서 직접 호출됨(프록시 적용 안됨) |
+
+이 세 가지의 해결 방안에 대해서는 내일 다시 정리하도록 하겠습니다~~~
+
 
 
 
