@@ -504,8 +504,42 @@ public void logTransfer(...) {
 | 예외가 발생했는데 ROLLBACK 안 됨 | checked exception (rollbackFor 누락) |
 | 트랜잭션 안에 여러 메서드 있는데 rollback 안됨 | 내부 메서드가 같은 클래스에서 직접 호출됨(프록시 적용 안됨) |
 
-이 세 가지의 해결 방안에 대해서는 내일 다시 정리하도록 하겠습니다~~~
+- 해당 상황에 대한 해결책은 아래와 같습니다.
 
+#### 트랜잭션 안 썼는데 데이터가 반영되는 상황
+
+- 원인: JDBC의 기본 설정인 `autocommit = true` 상태이기 때문입니다.
+    - SQL 하나를 실행하면 자동으로 `COMMIT` 되어 버리기 때문에, 트랜잭션이 아니지만 저장이 되어 되돌릴 수 없게 됩니다.
+
+- 해결 방법:
+| 방법 | 설명 |
+| --- | --- |
+| `@Transactional` 붙이기 | 해당 메서드나 클래스에 명시적으로 트랜잭션 선언 |
+| 커넥션 풀 기본 설정 확인 | `autoCommit=false`로 설정되어야 함 |
+| Spring Boot 사용 시 | 기본적으로 `DataSourceTransactionManager`가 autoCommit=false로 설정함 -> 따로 신경 안 써도 됨 |
+
+#### 예외가 발생했는데 ROLLBACK 안 되는 상황
+
+- 원인: Spring의 기본 정책은 `RuntimeException`만 rollback 대상임.
+    - 따라서 `IOException`은 Checked Exception이라 자동 rollback 대상이 아님.
+
+- 해결 방법:
+| 방법 | 설명 |
+| --- | --- |
+| `rollbackFor` 명시 | `@Transactional(rollbackFor = IOException.class)` |
+| RuntimeException으로 감싸기 | `throw new RuntimeException(e);` |
+| 정책 변경도 가능 | 전체 애플리케이션에 CheckedException도 rollback 되게 설정 가능 (비추천) |
+
+#### 트랜잭션 안에 여러 메서드 있는데 rollback 안 됨
+
+- 원인: Spring 트랜잭션은 AOP(프록시)기반
+    - `self.method()` 형태로 자기 자신을 호출하면 트랜잭션이 적용되지 않음.
+ 
+- 해결 방법:
+| 방법 | 설명 |
+| --- | --- |
+| 트랜잭션을 분리한 서비스로 분리 | `@Component`나 다른 클래스로 옮기고 `@Transactional` 적용 |
+| ApplicationContext 사용 | 자기 자신을 스프링 컨텍스트에서 꺼내서 호출 |
 
 
 
