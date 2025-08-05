@@ -28,4 +28,87 @@ Outbox 테이블을 사용하면 애플리케이션 로직과, 이로 인해 수
 다만, 이렇게 됐을 때 남은 문제점은 해당 메시지가 중복 발송되거나, 컨슈머에서 중복으로 처리될 수 있다는 점이다. 이 부분은 Inbox 패턴으로 해결할 수 있고, 이는 아래에서 다시 살펴보자!
 
 ### 예제 코드
-{WIP}
+#### 서비스
+```java
+@RequiredArgsConstructor
+@Service
+@Transactional
+public class UserService {
+    
+    private final UserRepository userRepository;
+    private final OutboxRepository outboxRepository;
+    private final ObjectMapper objectMapper;
+    
+    public void updateUser(Long userId, UserUpdateRequest request) {
+        // 1. 유저 정보 수정
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new UserNotFoundException("User not found"));
+        
+        user.updateInfo(request.getName(), request.getEmail());
+        userRepository.save(user);
+        
+        // 2. Outbox 테이블에 이벤트 기록 (같은 트랜잭션 내에서 처리)
+        UserModifiedEvent event = new UserModifiedEvent(
+                user.getId(), 
+                user.getName(), 
+                user.getEmail()
+            );
+            
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                .aggregateType("User")
+                .aggregateId(userId.toString())
+                .eventType("UserModified")
+                .timestamp(LocalDateTime.now())
+                .status(OutboxEvent.OutboxStatus.READY_TO_PUBLISH)
+                .build();
+                
+            outboxRepository.save(outboxEvent);
+        }
+    }
+}
+```
+
+#### kafka publisher
+```java
+@RequiredArgsConstructor
+@Component
+@Slf4j
+public class OutboxEventPublisher {
+    
+    private final OutboxRepository outboxRepository;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    
+    @Scheduled(fixedDelay = 5000) // 5초마다 실행
+    @Transactional
+    public void publishPendingEvents() {
+        List<OutboxEvent> pendingEvents = outboxRepository
+            .findByStatusOrderByTimestampAsc(OutboxEvent.OutboxStatus.READY_TO_PUBLISH);
+            
+        for (OutboxEvent event : pendingEvents) {
+            try {
+                // 카프카로 메시지 발행
+                kafkaTemplate.send("user-events", event.getAggregateId(), event.getPayload())
+                    .addCallback(
+                        result -> {
+                            // 발행 성공 시 상태 업데이트
+                            event.setStatus(OutboxEvent.OutboxStatus.PUBLISHED);
+                            outboxRepository.save(event);
+                            log.info("Successfully published event: {}", event.getId());
+                        },
+                        failure -> {
+                            // 발행 실패 시 상태 업데이트
+                            event.setStatus(OutboxEvent.OutboxStatus.FAILED);
+                            outboxRepository.save(event);
+                            log.error("Failed to publish event: {}", event.getId(), failure);
+                        }
+                    );
+                    
+            } catch (Exception e) {
+                event.setStatus(OutboxEvent.OutboxStatus.FAILED);
+                outboxRepository.save(event);
+                log.error("Error publishing event: {}", event.getId(), e);
+            }
+        }
+    }
+}
+```
