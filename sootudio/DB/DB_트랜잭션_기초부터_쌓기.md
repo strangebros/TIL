@@ -635,8 +635,34 @@ SELECT COUNT(*) FROM members WHERE age >= 20;
 
 - 표를 보면 MySQL이 다른 DBMS에 비해 기본적으로 꽤 보수적인 트랜잭션 격리수준을 가지고 있다는 것을 알 수 있습니다.
 
+### 상황 별 트랜잭션 격리 수준 추천
 
+> 프로젝트를 하거나, 실무에서 만날 수 있는 상활 별 사용이 추천되는 트랜잭션은 다음과 같습니다.
 
+| 상황 | 추천 격리 수준 |
+| --- | --- |
+| 빠른 응답 우선, 일관성 낮아도 됨 | READ COMMITTED |
+| 동시에 읽고 쓰는 작업 많고, SELECT가 중요 | REPEATABLE READ |
+| 재무, 은행 주문 시스템 등 정합성 최우선 | SERIALIZABLE |
+| 테스트 환경 / 단건 조회만 할 때 | READ UNCOMMITTED (But 사용시 주의 필요) |
 
+### 트랜잭션 격리 수준 지정 방법
 
+> SQL에서 직접 지정할 수도 있고, 제가 자주 사용하는 Sprinbg에서의 지정 방법도 알아보겠습니다.
+
+#### SQL로 직접 지정하는 방식
+
+```sql
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+BEGIN;
+```
+
+#### Spring에서 지정
+
+```sql
+@Transactional(isolation = Isolation.SERIALIZABLE)
+public void criticalSection(){
+  ...
+}
+```
 
