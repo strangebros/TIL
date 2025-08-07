@@ -559,6 +559,84 @@ public void logTransfer(...) {
 | REPEATABLE READ | 트랜잭션 동안 같은 조건으로 읽으면 항상 같은 결과 | 팬텀 리드 가능 |
 | SERIALIZABLE | 트랜잭션을 직렬로 실행한 것처럼 동작 | 가장 안전하지만 느림 |
 
-발생 가능한 문제 중 더티 리드, 반복 불가능한 읽기, 팬텀 리드에 대해서는 내일 다뤄보도록 하겠습니다.
+발생 가능한 문제 중 더티 리드, 반복 불가능한 읽기, 팬텀 리드에 대해서 자세하게 정리해 보겠습니다.
+
+### 트랜잭션 상황에서 발생할 수 있는 문제들
+
+#### Dirty Read(더티 리드)
+> 더티 리드는, 다른 트랜잭션의 커밋되지 않은 데이터를 읽어버리는 현상을 의미합니다.
+
+아래와 같은 예시 상황을 들어보겠습니다.
+- 트랜잭션1: A 계좌에서 100만원 출금 -> 아직 COMMIT 안함
+- 트랜잭션2: 그 변경된 잔액을 보고 "이체 완료" 처리함
+- 트랜잭션1이 롤백 하면 -> 트랜잭션2는 없는 데이터를 근거로 처리한 셈
+
+때문에, 이러한 더티 리드 상황은 현업에서 **매우 위험** 할 수 있습니다.
+더티 리드는 트랜잭션 격리 수준 중 **READ UNCOMMITTED**에서 발생합니다.
+
+#### Non-Repeatable Read(반복 불가능한 읽기)
+> 반복 불가능한 읽기는, 같은 데이터를 두 번 읽었는데 값이 달라지는 경우를 의미합니다.
+
+아래와 같은 예시 상황이 있습니다.
+```sql
+-- 트랜잭션1: 사용자 이름을 읽음 -> "풀킴"
+SELECT name FROM members WHERE id = 1;
+
+-- 트랜잭션2: 같은 사용자의 이름을 "수튜디오"로 바꿈 + COMMIT
+UPDATE members SET name = "수튜디오" WHERE id = 1;
+
+-- 트랜잭션1: 다시 SELECT를 하면 "수튜디오" 라는 값이 나옴 <- 다시 값이 바뀜
+SELECT name FROM members WHERE id = 1;
+```
+
+반복 불가능한 읽기는 트랜잭션 격리 수준 중 **READ COMMITTED 이하**에서 발생합니다.
+
+#### Phantom Read(팬텀 리드)
+> 팬텀 리드는, WHERE 조건은 같은데, 새로운 행(레코드)이 생기거나 사라지는 경우를 의미합니다.
+
+아래와 같은 예시 상황을 들어보겠습니다.
+
+```sql
+-- 트랜잭션1: 나이 20세 이상 사용자 SELECT -> 3명
+SELECT COUNT(*) FROM members WHERE age >= 20;
+
+-- 트랜잭션2: 새로운 사용자(25세) INSERT + COMMIT
+INSERT INTO members VALUES ("풀킴", 25)
+COMMIT;
+
+-- 트랜잭션1: 다시 SELECT를 하면 4명이 됨. <- 👻 갑자기 한 명 늘어남
+SELECT COUNT(*) FROM members WHERE age >= 20;
+```
+
+팬텀 리드는 트랜잭션 격리 수준 중 **REPEATABLE READ 이하**에서 발생합니다.
+
+### 각 격리 수준별 문제 상황 발생 여부와 성능 요약
+
+> 위에서 정라했던 각 격리 수준과 그에 대한 문제, 그리고 성능을 표로 요약해보겠습니다.
+
+| 수준 | Dirty Read | Non-Repeatable Read | Phantom Read | 성능 |
+| --- | --- | --- | --- | --- |
+| READ UNCOMMITTED | ✅ 발생 | ✅ 발생 | ✅ 발생 | 🚀 매우 빠름 |
+| READ COMMITTED | ❌ 방지 | ✅ 발생 | ✅ 발생 | 👍 빠름 |
+| REPEATABLE READ | ❌ 방지 | ❌ 방지 | ✅ 발생 | 😐 중간 |
+| SERIALIZABLE | ❌ 방지 | ❌ 방지 | ❌ 방지 | 🐢 느림(락 많음) |
+
+원래는 md로 정리할 때 표에 이모티콘 넣지 않는걸 선호하는 편인데, 지피티가 이모티콘을 너무 직관적으로 잘 만들어줘서 같이 넣어봤습니다... 어떤가요?!
+
+### DBMS별 트랜잭션 격리 수준 기본값
+
+> 각 DBMS는 기본적으로 설정되어 있는 트랜잭션 격리 수준이 있습니다.
+
+| DBMS | 기본 격리 수준 |
+| MySQL(InnoDB) | REPEATABLE READ |
+| PostgreSQL | READ COMMITTED |
+| Oracle | READ COMMITTED |
+| SQL Server | READ COMMITTED |
+
+- 표를 보면 MySQL이 다른 DBMS에 비해 기본적으로 꽤 보수적인 트랜잭션 격리수준을 가지고 있다는 것을 알 수 있습니다.
+
+
+
+
 
 
