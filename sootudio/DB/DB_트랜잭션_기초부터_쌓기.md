@@ -668,7 +668,7 @@ public void criticalSection(){
 
 ## Deadlock(교착상태)와 Lock(잠금)구조
 
-### Lock r개념
+### Lock 개념
 
 > Lock이란, 동시의 여러 트랜잭션이 같은 데이터를 건드릴 때 정합성이 깨지는 것을 막기 위한 안전장치입니다.
 
@@ -695,3 +695,21 @@ Lock과 연관된 기본적인 용어에는 다음과 같은 것들이 있습니
 - REPEATABLE READ(MySQL 기본): 같은 트랜잭션에서 재조회 일관성 높아짐.
 - SERIALIZABLE: 가장 보수적, 충돌 많음(성능 비용 큼)
 
+### Deadlock 개념
+
+> Deadlock은 트랜잭션 A가 가진 락을 B가 기다리고, 동시에 B가 가진 락을 A가 기다려 서로 양보가 불가능한 순환 대기에 빠지는 상태를 의미합니다.
+
+#### Deadlock의 예시
+
+Deadlock이 걸리는 가장 흔한 패턴은 아래와 같으며, 서로 다른 순서로 같은자원을 업데이트하는 경우입니다.
+
+```sql
+-- Tx A                          -- Tx B
+BEGIN;                           BEGIN;
+UPDATE item SET ... WHERE id=1;  UPDATE item SET ... WHERE id=2;
+-- A는 id=1의 X 락 보유           -- B는 id=2의 X 락 보유
+UPDATE item SET ... WHERE id=2;  UPDATE item SET ... WHERE id=1;
+-- A는 id=2를 기다림              -- B는 id=1을 기다림  → 교착!
+```
+- 이러한 경우, DB 엔진은 주기적으로 교착 탐지를 하고, 툴 중 한 트랜잭션을 희생시켜 롤백시킨다고 합니다.
+- 애플리케이션의 경우에는 예외로 감지하여 던진다고 합니다.
