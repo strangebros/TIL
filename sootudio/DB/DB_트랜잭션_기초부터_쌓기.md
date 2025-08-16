@@ -752,3 +752,27 @@ INSERT ... ON CONFLICT (...) DO UPDATE
 ```
 
 - 해당 방식들로 왕복 횟수와 잠금을 줄일 수 있다고 합니다.
+
+### 교착 발생 재현 & 예방 예시
+
+#### 나쁜 예 - 다른 순서로 잠가 교착
+
+```sql
+-- Transaction A
+BEGIN;
+UPDATE item set stock=stock-1 WHERE id=1;
+UPDATE item set stock=stock-1 WHERE id=2;
+
+-- Transaction B
+UPDATE item SET stock=stock-1 WHERE id=2;
+UPDATE item set stock=stock-1 WHERE id=1; -- 서로 교착 대기 -> Deadlock
+```
+
+#### 좋은 예 - 항상 같은 순서로 잠금
+
+```sql
+-- 모든 코드가 항상 작은 id → 큰 id 순서로 처리
+BEGIN;
+UPDATE item SET stock=stock-1 WHERE id IN (1,2) ORDER BY id; -- 애플리케이션에서 보장
+COMMIT;
+```
