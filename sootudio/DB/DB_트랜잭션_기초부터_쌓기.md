@@ -776,3 +776,18 @@ BEGIN;
 UPDATE item SET stock=stock-1 WHERE id IN (1,2) ORDER BY id; -- 애플리케이션에서 보장
 COMMIT;
 ```
+
+### Lock 상태의 진단/모니터링 방법
+
+- 각 DB마다 Lock 상태를 진단/모니터링 할 수 있는 방법이 있습니다.
+
+- MySQL(InnoDB)
+    - 즉시: `SHOW ENGINE INNODB STATUS\G` (마지막 교착 포인트)
+    - 상세: `performance_schema.data_locks`, `data_lock_waits`, `events_statements_*`
+- PostgreSQL
+    - `SELECT * FROM pg_locks pl JOIN pg_stat_activity sa ON pl.pid=sa.pid;`
+    - 설정: `log_lock_waits=on`, `deadlock_timeout` 조정(대기 로그)
+- Oracle
+    - `V$LOCK`, `V$SESSION`, `DBA_BLOCKERS/DBA_WAITERS`, trace 파일
+
+- 운영 시 'Lock wait timeout exceeded'(MySQL)나 'deadlock detected'(PG) 로그를 수집/알림으로 묶어 재현 SQL + 호출 경로를 기록해두면 원인 파악이 훨씬 빨라진다고 합니다.
