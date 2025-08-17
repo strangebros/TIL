@@ -38,6 +38,17 @@ ROLLBACK;
 
 각 키워드들과 트랜잭션의 세부적인 특성에 대해서는, 아래에 하나하나 자세히 설명하며 공부해 보겠습니다.
 
+### 트랜잭션의 4대 특성 (ACID)
+
+- 본격적으로 시작하기 전에, 트랜잭션의 4대 특성에 대해서도 간단하게 알아보고 가겠습니다.
+
+| 특성 | 의미 | 설명 |
+| --- | --- | --- |
+| A(Atomicity) | 원자성 | 모두 성공 or 실패해야 함 (ex: 은행에서 계좌이체를 할 때 출금만 되고 입금이 안되면 안 됨) |
+| C(Consistency | 일관성 | 규칙/제약 지켜야 함 (ex: 은행 거래 시 잔고는 음수가 되면 안됨) |
+| I(Isolation) | 격리성 | 동시에 실행돼도 독립적이어야 함 (ex: 내 주문이 다른 사람 주문에 끼어들면 안 됨) |
+| D(Durability) | 지속성 | 확정(COMMIT)되면 영구 저장되어야 함. (ex:COMMIT 된 후 서버가 꺼져도 기록은 남음) |
+
 </br>
 
 ## `BEGIN` 키워드
@@ -512,6 +523,7 @@ public void logTransfer(...) {
     - SQL 하나를 실행하면 자동으로 `COMMIT` 되어 버리기 때문에, 트랜잭션이 아니지만 저장이 되어 되돌릴 수 없게 됩니다.
 
 - 해결 방법:
+
 | 방법 | 설명 |
 | --- | --- |
 | `@Transactional` 붙이기 | 해당 메서드나 클래스에 명시적으로 트랜잭션 선언 |
@@ -524,6 +536,7 @@ public void logTransfer(...) {
     - 따라서 `IOException`은 Checked Exception이라 자동 rollback 대상이 아님.
 
 - 해결 방법:
+
 | 방법 | 설명 |
 | --- | --- |
 | `rollbackFor` 명시 | `@Transactional(rollbackFor = IOException.class)` |
@@ -536,11 +549,14 @@ public void logTransfer(...) {
     - `self.method()` 형태로 자기 자신을 호출하면 트랜잭션이 적용되지 않음.
  
 - 해결 방법:
+
 | 방법 | 설명 |
 | --- | --- |
 | 트랜잭션을 분리한 서비스로 분리 | `@Component`나 다른 클래스로 옮기고 `@Transactional` 적용 |
 | ApplicationContext 사용 | 자기 자신을 스프링 컨텍스트에서 꺼내서 호출 |
 
+
+<br/>
 
 ## 트랜잭션의 격리 수준(Isolation Level)
 
@@ -553,7 +569,7 @@ public void logTransfer(...) {
 ### 트랜잭션 격리 수준 4단계(SQL 표준)
 
 | 격리 수준 | 설명 | 발생 가능한 문제 |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | READ UNCOMMITTED | 다른 트랜잭션의 커밋 전 변경도 볼 수 있음 | 더티 리드 |
 | READ COMMITTED | 커밋된 데이터만 읽을 수 있음 | 반복 불가능한 읽기 |
 | REPEATABLE READ | 트랜잭션 동안 같은 조건으로 읽으면 항상 같은 결과 | 팬텀 리드 가능 |
@@ -628,6 +644,7 @@ SELECT COUNT(*) FROM members WHERE age >= 20;
 > 각 DBMS는 기본적으로 설정되어 있는 트랜잭션 격리 수준이 있습니다.
 
 | DBMS | 기본 격리 수준 |
+| --- | --- |
 | MySQL(InnoDB) | REPEATABLE READ |
 | PostgreSQL | READ COMMITTED |
 | Oracle | READ COMMITTED |
