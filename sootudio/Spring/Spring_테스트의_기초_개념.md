@@ -30,6 +30,9 @@
     - 실제 환경에 가까움
     - 느리지만, 레이어 간 연결 검증
     - 예: Controller -> Service -> Repository 흐름이 정상 동작하는지 확인
+3. ESE(System) 테스트
+    - 실제 실행 환경 가까움
+    - 실무에선 보통 Testcontainers, RestAssured 활용
 
 <br />
 
@@ -39,10 +42,11 @@
     - `@Test`, `@BeforeEach`, `@AfterEach`
     - Assertions (`assertEquals`, `assetThrows`, `assertThat`)
 - Spring Boot Test 지원
-    - `@SpringBootTest`: 애플리케이션 전체 구동 (통합 테스트)
-    - `@WebMvcTest`: Controller 레이어만 테스트
-    - `@DataJpaTest`: Repository(JPA)만 테스트
-    - `@MockBean`: 스프링 컨텍스트에 등록된 Bean을 Mock으로 교체
+    - `@SpringBootTest`: 애플리케이션 전체 구동 (통합 테스트). 모든 Bean 로드 -> 무겁지만 전체 동작 확인
+    - `@WebMvcTest`: Controller 레이어만 테스트 -> API 스펙 검증
+    - `@DataJpaTest`: Repository(JPA)만 테스트 -> DB 쿼리 검증
+    - `@MockBean`: 스프링 컨텍스트에 등록된 특정 Bean을 Mock으로 교체
+    - `@Transactional`: 테스트 후 DB 자동 롤백(기본적으로 포함됨)
 
 <br />
 
@@ -59,10 +63,15 @@
 
 ### 좋은 테스트의 조건
 
-- 독립적: 테스트까리 서로 의존하지 않음.(순서 무관)
-- 빠름: 실행이 느림녀 작성/유지보수 부담 증가
-- 명확한 이름: `회원가입_성공()`이 `test1()`보다 나음
-- Given-When-Then 구조: Given(준비) -> When(실행) -> Then(검증)
+- 독립적: 테스트까리 서로 의존하지 않음(순서 무관). 하나의 테스트는 하나의 검증 포인트를 가지도록 하기
+- 빠름: 실행이 느리면 작성/유지보수 부담 증가
+- 명확한 이름:  `test1()` 같은 이름보다는 `회원가입_성공()`, `회원가입_중복닉네임_실패` 같이 설명형 이름 사용
+- Given-When-Then 구조:
+    ```java
+    // Given(상황 준비)
+    // When(행위 실행)
+    // Then(결과 검증)
+    ```
 
 <br />
 
