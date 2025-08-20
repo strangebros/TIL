@@ -80,3 +80,87 @@
 - 스프링 컨텍스트 자동 관리 -> 필요한 Bean 로딩/주입
 - DB 자동 롤백(`@DataJpaTest` 기본) -> 테스트 후 데이터 깨끗
 - MockMvc -> 실제 서버 띄우지 않고 API 테스트 가능
+
+<br />
+
+## Assertion
+
+### 개념
+
+Assertion은 실제 값이 내가 기대한 값인지를 코드로 확인하는 문장입니다.
+- 성공: 조건이 참 -> 테스트 통과
+- 실패: 조건이 거짓 -> 테스트 실패(원인 메시지 출력)
+
+Spring에서의 Assertion은 보통 두 가지 스타일을 사용합니다.
+
+1. Junit 기본 Assertions
+```java
+import static org.junit.jupiter.api.Assertions.*;
+
+assertEquals(5, calc.add(2, 3));
+assertTrue(list.isEmpty());
+assertThrows(IllegalArgumentException.class, () -> service.run(null)); // 예외 검증
+```
+
+2. AssertJ (가독성 높은 Fluent API)
+```java
+import static org.assertj.core.api.Assertions.*;
+
+assertThat(calc.add(2, 3)).isEqualTo(5);
+assertThat(list).isEmpty();
+```
+
+실무에서는 가독성과 컬렉션/객체 비교가 강력한 **AssertJ** 사용을 선호합니다.
+아래에서 설명하는 Assertion 관련 코드들도 AssertJ를 기준으로 설명하겠습니다.
+
+### 가장 많이 쓰는 AssertJ 패턴
+
+#### 1. 값/객체
+```java
+assertTaht(actual).isEqualTo(expected);            // 예상값과 실제값이 같은지 확인
+assertThat(score).isBetween(70, 100);              // 점수가 70점 이상 100점 이하인지 확인
+assertThat(name).startsWith("Kim").endsWith("su"); // 이름이 Kim으로 시작하여 su로 끝나는지 확인
+assertThat(flag).isTrue();                         // flag 값이 true인지 확인
+```
+
+#### 2.컬렉션/배열
+```java
+assertThat(list).hasSize(3)                                // size가 3인지 확인
+                .contains("a", "b")                        // a와 b 포함하는지 확인
+                .doesNotContain("z");                      // z 포함하지 않는지 확인
+
+assertThat(list).containsExactly("a", "b", "c");           // 순서까지 동일한지 확인
+assertThat(list).containsExactlyInAnyOrder("b", "c", "a"); // 순서 무시하고 확인
+```
+
+#### 3. Optional / Null
+```java
+assertThat(optional).isPresent()
+                    .get().isEqualTo("value");
+assertThat(obj).isNotNull();
+```
+
+#### 4. 객체의 필드 비교(필드 단위로 동등성 확인)
+```java
+assertThat(actualUser)
+    .usingRecursiveComparision()        // 중첩 필드까지 재귀 비교
+    .ignoringRields("id", "createdAt")
+    .isEqualTo(expectedUser)            // 예상 사용자와 실제 사용자 객체들 비교
+```
+
+#### 5. 여러 검증을 묶어서 (한 테스트에서)
+```java
+import static org.junit.jupiter.api.Assertions.assertAll;
+
+assertAll(
+    () -> assertThat(user.getName()).isEqualTo("hong"),
+    () -> assertThat(user.getAge()).isGreaterThan(18)
+);
+```
+
+#### 6. 실패 메시지 커스텀
+```java
+assertThat(total)
+    .as("총합은 부가세 포함 110이어야 함") //실패 시 설명 제공
+    .isEqualTo(110);
+```
