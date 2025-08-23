@@ -73,3 +73,295 @@ void main() {
   );
 }
 ```
+
+### cluade 가 정리해준 riverpod vs spring 개념 비교
+| Riverpod | 백엔드 비유 | 설명 |
+|----------|------------|------|
+| **Provider** | Bean/Service | 의존성 주입될 객체 정의 |
+| **ref** | DI Container | 의존성을 가져오는 참조 |
+| **ProviderScope** | Application Context | 전체 DI 컨테이너 |
+| **ConsumerWidget** | Controller | Provider를 사용하는 위젯 |
+
+### provider 종류
+```dart
+// 1. Provider - 단순 값/서비스 (백엔드의 @Service)
+final apiServiceProvider = Provider((ref) => ApiService());
+
+// 2. StateProvider - 단순 상태 (백엔드의 전역 변수)
+final counterProvider = StateProvider((ref) => 0);
+
+// 3. StateNotifierProvider - 복잡한 상태 (백엔드의 @Service + @State)
+final userProvider = StateNotifierProvider<UserNotifier, User>((ref) {
+  return UserNotifier();
+});
+
+// 4. FutureProvider - 비동기 데이터 (백엔드의 @Async)
+final fetchUserProvider = FutureProvider((ref) async {
+  return await api.getUser();
+});
+```
+
+### 예제코드
+
+#### Step 1: Todo 모델 정의
+
+```dart
+// lib/models/todo.dart
+class Todo {
+  final String id;
+  final String title;
+  final bool completed;
+
+  Todo({
+    required this.id,
+    required this.title,
+    this.completed = false,
+  });
+
+  Todo copyWith({
+    String? id,
+    String? title,
+    bool? completed,
+  }) {
+    return Todo(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      completed: completed ?? this.completed,
+    );
+  }
+}
+```
+
+#### Step 2: StateNotifier로 비즈니스 로직 구현
+
+```dart
+// lib/providers/todo_provider.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/todo.dart';
+
+// StateNotifier = 백엔드의 Service 클래스와 유사
+class TodoNotifier extends StateNotifier<List<Todo>> {
+  TodoNotifier() : super([]);  // 초기값은 빈 리스트
+
+  // Todo 추가
+  void addTodo(String title) {
+    final newTodo = Todo(
+      id: DateTime.now().toString(),
+      title: title,
+    );
+    state = [...state, newTodo];  // 새 리스트로 교체 (불변성)
+  }
+
+  // Todo 토글
+  void toggleTodo(String id) {
+    state = state.map((todo) {
+      if (todo.id == id) {
+        return todo.copyWith(completed: !todo.completed);
+      }
+      return todo;
+    }).toList();
+  }
+
+  // Todo 삭제
+  void removeTodo(String id) {
+    state = state.where((todo) => todo.id != id).toList();
+  }
+}
+
+// Provider 정의 (백엔드의 @Bean 등록과 유사)
+final todoProvider = StateNotifierProvider<TodoNotifier, List<Todo>>((ref) {
+  return TodoNotifier();
+});
+
+// 완료된 Todo만 필터링하는 Provider
+final completedTodosProvider = Provider((ref) {
+  final todos = ref.watch(todoProvider);
+  return todos.where((todo) => todo.completed).toList();
+});
+
+// 통계 Provider
+final todoStatsProvider = Provider((ref) {
+  final todos = ref.watch(todoProvider);
+  return {
+    'total': todos.length,
+    'completed': todos.where((t) => t.completed).length,
+    'remaining': todos.where((t) => !t.completed).length,
+  };
+});
+```
+
+#### Step 3: UI에서 사용하기
+
+```dart
+// lib/screens/todo_screen.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/todo_provider.dart';
+
+// ConsumerWidget = Provider를 사용할 수 있는 Widget
+class TodoScreen extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Provider 구독 (변경 시 자동 리빌드)
+    final todos = ref.watch(todoProvider);
+    final stats = ref.watch(todoStatsProvider);
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Todo (${stats['remaining']} remaining)'),
+      ),
+      body: ListView.builder(
+        itemCount: todos.length,
+        itemBuilder: (context, index) {
+          final todo = todos[index];
+          return ListTile(
+            leading: Checkbox(
+              value: todo.completed,
+              onChanged: (_) {
+                // Provider의 메서드 호출
+                ref.read(todoProvider.notifier).toggleTodo(todo.id);
+              },
+            ),
+            title: Text(
+              todo.title,
+              style: todo.completed
+                  ? TextStyle(decoration: TextDecoration.lineThrough)
+                  : null,
+            ),
+            trailing: IconButton(
+              icon: Icon(Icons.delete),
+              onPressed: () {
+                ref.read(todoProvider.notifier).removeTodo(todo.id);
+              },
+            ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddDialog(context, ref),
+        child: Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _showAddDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add Todo'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              ref.read(todoProvider.notifier).addTodo(controller.text);
+              Navigator.pop(context);
+            },
+            child: Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+#### Step 4: 비동기 데이터 처리 (API 연동)
+
+```dart
+// lib/providers/user_provider.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// API 서비스 Provider
+final apiServiceProvider = Provider((ref) => ApiService());
+
+// 비동기 데이터 Provider
+final userListProvider = FutureProvider<List<User>>((ref) async {
+  final apiService = ref.watch(apiServiceProvider);
+  return await apiService.fetchUsers();
+});
+
+// UI에서 사용
+class UserListScreen extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final usersAsync = ref.watch(userListProvider);
+    
+    return usersAsync.when(
+      data: (users) => ListView.builder(
+        itemCount: users.length,
+        itemBuilder: (_, i) => ListTile(title: Text(users[i].name)),
+      ),
+      loading: () => CircularProgressIndicator(),
+      error: (err, stack) => Text('Error: $err'),
+    );
+  }
+}
+```
+
+#### Step 5: Provider 간 의존성 관리
+
+```dart
+// 백엔드의 DI처럼 Provider끼리 의존성 주입
+final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  return AuthNotifier();
+});
+
+final userRepositoryProvider = Provider((ref) {
+  // 다른 Provider 주입받기
+  final auth = ref.watch(authProvider);
+  return UserRepository(token: auth.token);
+});
+
+final currentUserProvider = FutureProvider((ref) async {
+  // Repository Provider 사용
+  final repository = ref.watch(userRepositoryProvider);
+  return await repository.getCurrentUser();
+});
+```
+
+### 핵심 패턴 정리
+
+#### 1. **읽기 vs 구독**
+```dart
+// watch: 변경 감지 + 리빌드 (UI에서 주로 사용)
+final todos = ref.watch(todoProvider);
+
+// read: 일회성 읽기 (이벤트 핸들러에서 사용)
+ref.read(todoProvider.notifier).addTodo('New');
+```
+
+#### 2. **Provider 조합**
+```dart
+// 여러 Provider를 조합해서 새로운 Provider 생성
+final filteredTodosProvider = Provider((ref) {
+  final todos = ref.watch(todoProvider);
+  final filter = ref.watch(filterProvider);
+  
+  switch (filter) {
+    case Filter.completed:
+      return todos.where((t) => t.completed).toList();
+    case Filter.active:
+      return todos.where((t) => !t.completed).toList();
+    default:
+      return todos;
+  }
+});
+```
+
+#### 3. **상태 초기화**
+```dart
+// Provider 새로고침
+ref.refresh(userListProvider);
+
+// 상태 초기화
+ref.invalidate(todoProvider);
+```
