@@ -365,3 +365,55 @@ ref.refresh(userListProvider);
 // 상태 초기화
 ref.invalidate(todoProvider);
 ```
+
+### RiverPod의 장점 요약
+
+#### ✅ Provider 대비 개선된 점
+
+1. **Context 없이 어디서나 접근**
+   ```dart
+   // Provider - context 필요
+   Provider.of<AuthProvider>(context).token
+   
+   // RiverPod - context 불필요
+   ref.read(authProvider).token
+   ```
+
+2. **타입 안전성 강화**
+   ```dart
+   // Provider - 런타임 에러 가능
+   Provider.of<String>(context)  // 잘못된 타입이면 에러
+   
+   // RiverPod - 컴파일 시점에 체크
+   final value = ref.watch(stringProvider);  // 타입 자동 추론
+   ```
+
+3. **비동기 처리 간소화**
+   ```dart
+   // Provider - 복잡한 FutureBuilder 패턴
+   FutureBuilder<User>(
+     future: api.getUser(),
+     builder: (context, snapshot) {
+       if (snapshot.hasData) return Text(snapshot.data!.name);
+       if (snapshot.hasError) return Text('Error');
+       return CircularProgressIndicator();
+     },
+   )
+   
+   // RiverPod - when으로 간단하게
+   userProvider.when(
+     data: (user) => Text(user.name),
+     error: (err, _) => Text('Error'),
+     loading: () => CircularProgressIndicator(),
+   )
+   ```
+
+4. **Provider 간 의존성 관리**
+   ```dart
+   // 백엔드 DI 컨테이너처럼 자동으로 의존성 해결
+   final userProvider = FutureProvider((ref) async {
+     final auth = ref.watch(authProvider);     // 자동 주입
+     final api = ref.watch(apiProvider);       // 자동 주입
+     return api.getUser(auth.token);
+   });
+   ```
