@@ -47,6 +47,12 @@ Spring에서 테스트를 진행하려고 할 경우, 아래와 같은 도구들
 - Repository 테스트할 때 실제 MySQL 같은 운영 DB 대신 임시로 메모리에 DB를 띄움.
 - 테스트 시작 시 `create-drop`으로 테이블 만들어 쓰고, 끝나면 자동 삭제.
 - 속도 빠르고 운영 DB 오염 안 됨.
+- H2 DB를 사용하는 방법
+    - JPA(Hibernate): `@Entity` + `JpaRepository` 기반 테스트(가장 일반적)
+    - JdbcTemplate: SQL 직접 실행하면서 검증 가능
+    - MyBatis: Mapper XML/어노테이션 기반 테스트 가능
+    - 순수 JDBC: `DriverManager.getConnection(...)` 해서 Statement 실행도 가능
+    - => 즉, H2는 단순히 "테스트용으로 가볍게 띄울 수 있는 DB". ORM, MyBatis, 생 JDBC 든 전부 붙여서 쓸 수 있음.
 
 `build.gradle`
 ```java
