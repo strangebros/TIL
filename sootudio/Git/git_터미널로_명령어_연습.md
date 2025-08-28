@@ -29,6 +29,13 @@ TIL Repository로 연습할까 하다가, 저 혼자 사용하는 곳이 아니�
 
 ## 2. 저장소 clone 하고 소스 코드를 변경 후 add, commit, push, pull 해보기
 
+그냥 git 연습만 하려고 하면 md 파일 등으로 하면 되지만, 그래도 Spring을 사용해서 해보려고, 간단하게라도 프로젝트를 만들었습니다.
+
+<img width="770" height="880" alt="image" src="https://github.com/user-attachments/assets/af4e4a4b-c9de-49c6-8f99-1a8cd9d7ff0d" />
+
+아래처럼 Spring Web만 의존성을 넣어서, 최소한의 기능만 돌아가는 프로젝트로 만들었습니다.
+
+
 ## 3. branch를 만들고 merge 하고, reset 해보기
 
 ## 4. merge, reset, rebase는 대략적인 개념만 알면 됨. 필수는 아님
