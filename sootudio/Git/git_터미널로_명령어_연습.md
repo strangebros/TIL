@@ -21,6 +21,12 @@ TIL Repository로 연습할까 하다가, 저 혼자 사용하는 곳이 아니�
 
 ## 1. github에 계정 만들고, 저장소 만들어 보기
 
+당연히 github 계정은 이미 되어 있습니다. 테스트용 Repository를 하나 만들어 보겠습니다
+<img width="359" height="168" alt="image" src="https://github.com/user-attachments/assets/1d539eba-9183-43b3-8fcb-e8bb01c97b95" />
+
+이름은 git_local_practice로 하겠습니다.
+
+
 ## 2. 저장소 clone 하고 소스 코드를 변경 후 add, commit, push, pull 해보기
 
 ## 3. branch를 만들고 merge 하고, reset 해보기
