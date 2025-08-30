@@ -21,7 +21,8 @@ TIL Repository로 연습할까 하다가, 저 혼자 사용하는 곳이 아니�
 
 ## 1. github에 계정 만들고, 저장소 만들어 보기
 
-당연히 github 계정은 이미 되어 있습니다. 테스트용 Repository를 하나 만들어 보겠습니다
+당연히 github 계정은 이미 되어 있습니다. 테스트용 Repository를 하나 만들어 보겠습니다.
+
 <img width="359" height="168" alt="image" src="https://github.com/user-attachments/assets/1d539eba-9183-43b3-8fcb-e8bb01c97b95" />
 
 이름은 git_local_practice로 하겠습니다.
@@ -40,8 +41,78 @@ TIL Repository로 연습할까 하다가, 저 혼자 사용하는 곳이 아니�
 
 ## 4. merge, reset, rebase는 대략적인 개념만 알면 됨. 필수는 아님
 
-### merge
+### git merge
 
-### reset
+#### 개념
+- 두 갈래로 나뉜 브랜치를 합치는 것
+- 비유: 두 개의 길(브랜치)을 하나의 길로 합친다 -> 새로운 합류 지점(commit)이 생김
 
-### rebase
+#### 사용 방법
+
+```bash
+# main 브랜치에 feature 브랜치를 합치고 싶을 때
+git checkout main
+git merge feature
+```
+
+#### 사용하는 이유
+- 여러 사람이 각자 만든 기능(feature 브랜치)을 한 데 모을 때.
+- 원래 있던 commit 기록을 그대로 보존하면서 합칠 수 있음.
+
+#### 주의점
+- merge commit이 생겨서 히스토리가 복잡해질 수 있음. (특히 작은 수정에도 merge commit이 계속 생김)
+- 충돌(conflict)이 발생하면 직접 수정해야 함.
+
+### git reset
+
+#### 개념
+- 현재 브랜치의 HEAD(포인터)를 과거 특정 시점으로 되돌리는 것
+- 비유: 타임머신 타고 과거로 돌라가기
+- 하지만 옵션에 따라 파일 상태가 다르게 됨 (`--soft`, `--mixed`, `--hard`)
+
+#### 사용 방법
+
+```bash
+# 바로 전 커밋으로 되돌리기
+git reset --hard HEAD~1
+
+# 특정 커밋으로 되돌리기
+git reset --hard <commit-id>
+```
+
+#### 사용하는 이유
+
+- 잘못된 커밋을 없었던 일로 하고 싶을 때
+- 예: 민감한 정보(password 등)를 실수로 commit 했을 때
+
+#### 주의점
+
+- `--hard`는 작업 내용까지 다 날려버리므로 매우 위험!
+- 이미 push 한 커밋을 reset하면 절대 안됨(협업 중이면 히스토리가 꼬여버림)
+- reset은 로컬 실험용으로만 사용한다고 생각하면 됨
+
+### git rebase
+
+#### 개념
+
+- 내 브랜치의 시작점을 다른 브랜치의 최신 커밋 위로 옮기는 것
+- 비유: 줄을 다시 서는 것
+- merge가 두 길을 합치는 거라면, rebase는 내 길을 최신 길 뒤에 붙이는 것
+
+#### 사용 방법
+
+```bash
+# feature 브랜치를 main 최신 커밋 뒤로 옮기기
+git checkout feature
+git rebase main
+```
+
+#### 사용하는 이유
+
+- commit 기록을 일자로 깔끔하게 만들고 싶을 때
+- 마치 혼자 작업한 것처럼 히스토리가 정리됨.
+
+#### 주의점
+- 이미 공유된 브랜치에서 rebase 하면 안 됨 (동료들과 commit ID가 달라서 충돌 대참사 가능)
+- 내 로컬 feature 브랜치에서만 안전하게 사용해야 함.
+- 충돌이 나면 commit 마다 직접 해결해야 해서 번거로움.
