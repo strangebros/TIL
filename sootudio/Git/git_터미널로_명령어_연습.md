@@ -36,8 +36,49 @@ TIL Repository로 연습할까 하다가, 저 혼자 사용하는 곳이 아니�
 
 아래처럼 Spring Web만 의존성을 넣어서, 최소한의 기능만 돌아가는 프로젝트로 만들었습니다.
 
+그리고, 만들어둔 git저장소를 clone 합니다.
+
+<img width="505" height="91" alt="image" src="https://github.com/user-attachments/assets/cb33cd6f-cb97-4199-8be6-13f5954da25b" />
+
+여기에 Spring initializr로 만든 프로젝트를 넣어 주겠습니다.
+
+프로젝트를 처음 올릴 때는, 그냥 `git add .` 명령어로 전부 추가해서 올려 줬습니다.
+
+<img width="686" height="459" alt="image" src="https://github.com/user-attachments/assets/b52e106b-f166-4f15-b761-ea2a136df600" />
+
+main 브랜치에다 바로 만들었기 때문에, github을 보면 코드들이 바로 올라와 있습니다.
+
+<img width="893" height="429" alt="image" src="https://github.com/user-attachments/assets/d0fb358e-a694-4fea-be19-876359e5691c" />
+
 
 ## 3. branch를 만들고 merge 하고, reset 해보기
+
+터미널에서 브랜치를 만들려면, 다음과 같은 명령어를 입력하면 됩니다.
+
+<img width="322" height="30" alt="image" src="https://github.com/user-attachments/assets/288b47e1-16aa-4596-a98a-19f8a0571477" />
+
+이렇게 하면, 브랜치 생성과 동시에 이동까지 합니다.
+물론 아래와 같이 해도 됩니다.
+
+```bash
+# 1. 브랜치 생성
+git branch test/#1-gitCommandTest
+
+# 2. 브랜치 목록 확인
+git branch
+# => main
+# => test/#1-gitCommandTest   (별표 * 표시된 게 현재 위치 브랜치)
+
+# 3. 새 브랜치로 이동
+git checkout test/#1-gitCommandTest
+
+```
+
+파일을 수정한 뒤, add commit을 하고, main 브랜치에 merge 하려면, 아래와 같은 과정을 거치면 됩니다.
+
+<img width="318" height="264" alt="image" src="https://github.com/user-attachments/assets/5726cecc-a613-4494-9a32-29e64a040900" />
+
+
 
 ## 4. merge, reset, rebase는 대략적인 개념만 알면 됨. 필수는 아님
 
