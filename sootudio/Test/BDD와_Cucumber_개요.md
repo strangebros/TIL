@@ -14,4 +14,8 @@
 
 - `.feature` 확장자를 가진 파일에 Gherkin 문법으로 시나리오를 적어, 개발자와 비개발자 모두가 쉽게 읽을 수 있는 문서를 작성할 수 있습니다.
     - 또한, 해당 문서는 자동화된 테스트 도구로도 사용할 수 있습니다.
+ 
+### Cucumber의 핵심
+- Gherkin(사람이 읽는 명세) <-> Step Definitions(실행 코드) 연결
+- Runner(JUnit Platform Suite), GLUE(스텝 패키지), features/ 디렉터리
 
