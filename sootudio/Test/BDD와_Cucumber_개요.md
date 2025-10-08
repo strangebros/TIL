@@ -29,6 +29,8 @@
 - 테스트 시나리오를 Cucumber가 이해할 수 있도록 만들어주는 문법
 - 실제 시나리오처럼 자연어로 작성할 수 있다는 장점
 - `.feature` 파일에서 사용
+- <img width="677" height="160" alt="image" src="https://github.com/user-attachments/assets/9640a07b-b053-4174-9dd9-526e4044dddc" />
+    - `.feature` 파일에서 Cucumber 관련 확장 플러그인을 설치하면, 다음과 같이 시나리오에 연결되는 테스트 메서드를 자동으로 만들 수 있음.
 
 ### Feature
 
