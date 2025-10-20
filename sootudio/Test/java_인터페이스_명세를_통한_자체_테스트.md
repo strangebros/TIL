@@ -14,3 +14,99 @@
 ```
 
 이제 우리 서비스에서 파트너사의 url로 호출을 때리면, 로컬로 옵니다.
+
+## 2. 순수 자바 단일 파일 HTTP 서버 (JDK 내장 API만)
+
+> JDK 6+에 들어있는 `com.sun.net.httpserver.HttpServer` 사용. Spring/서블릿/톰캣 불필요
+
+`MockPartnerServiceServer.java`
+```java
+import com.sun.net.httpserver.*;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+
+public class MockResortServer {
+    static void sendJson(HttpExchange ex, int status, String body) throws IOException {
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+        ex.sendResponseHeaders(status, bytes.length);
+        try (OutputStream os = ex.getResponseBody()) { os.write(bytes); }
+    }
+
+    static String readBody(HttpExchange ex) throws IOException {
+        try (InputStream is = ex.getRequestBody()) {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            byte[] buf = new byte[4096]; int r;
+            while ((r = is.read(buf)) != -1) bos.write(buf, 0, r);
+            return bos.toString("UTF-8");
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        int port = (args.length > 0) ? Integer.parseInt(args[0]) : 8081; // 필요시 80으로
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+
+        // GET /api/room/search  (시나리오: ?scenario=empty)
+        server.createContext("/api/room/search", ex -> {
+            try {
+                if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) {
+                    sendJson(ex, 405, "{\"error\":\"METHOD_NOT_ALLOWED\"}");
+                    return;
+                }
+                String query = ex.getRequestURI().getQuery();
+                boolean empty = (query != null && query.contains("scenario=empty"));
+                String json = empty
+                        ? "{ \"status\":\"OK\",\"availableRooms\":[],\"message\":\"테스트(빈 결과)\" }"
+                        : "{ \"status\":\"OK\",\"availableRooms\":["
+                          + "{\"id\":\"R101\",\"name\":\"오션뷰 스위트\",\"price\":200000},"
+                          + "{\"id\":\"R102\",\"name\":\"가든뷰 스탠다드\",\"price\":120000}"
+                          + "],\"message\":\"테스트(가용 객실)\"}";
+                sendJson(ex, 200, json);
+            } finally { ex.close(); }
+        });
+
+        // POST /api/reservation  (특정 값으로 실패 시뮬레이션)
+        server.createContext("/api/reservation", ex -> {
+            try {
+                if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) {
+                    sendJson(ex, 405, "{\"error\":\"METHOD_NOT_ALLOWED\"}");
+                    return;
+                }
+                String body = readBody(ex);
+                System.out.println("[예약요청] " + body); // 로깅
+
+                // 단순 분기 예시: body에 "R999" 포함되면 실패
+                if (body != null && body.contains("\"roomId\":\"R999\"")) {
+                    sendJson(ex, 409, "{ \"status\":\"FAIL\",\"code\":\"ROOM_NOT_AVAILABLE\",\"message\":\"해당 객실은 더 이상 예약 불가(mock)\" }");
+                } else {
+                    sendJson(ex, 200, "{ \"status\":\"SUCCESS\",\"reservationId\":\"MOCK-RES-12345\",\"message\":\"예약 성공(mock)\" }");
+                }
+            } finally { ex.close(); }
+        });
+
+        // 기본 404
+        server.createContext("/", ex -> {
+            try { sendJson(ex, 404, "{ \"status\":\"NOT_FOUND\",\"path\":\"" + ex.getRequestURI() + "\" }"); }
+            finally { ex.close(); }
+        });
+
+        server.setExecutor(null);
+        server.start();
+        System.out.println("Mock Resort API (HTTP) on port " + port);
+        System.out.println("예) http://resort.partner.com:" + port + "/api/room/search");
+    }
+}
+```
+
+### 해당 코드를 컴파일하고 실행하려면 아래와 같이 실행
+
+```bash
+javac MockPartnerServiceServer.java
+java MockPartnerServiceServer 8081
+```
+
+레거시 애플리캐이션이 포트를 못 바꾼다면. 80포트로 실행(`java MockPartnerServiceServer 80`) 하고 관리자 권한으로 띄우기
+
+
