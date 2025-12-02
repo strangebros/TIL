@@ -18,10 +18,15 @@
 > ... A scheme may define a default port.  For example, the "http" scheme
    defines a default port of "80", corresponding to its reserved TCP
    port number.  ...
+> 
+>  URI producers and normalizers should omit the port component and
+   its ":" delimiter if port is empty or if its value would be the
+   same as that of the scheme's default.
 
 - 해당 내용은
     1. 각 스킴(HTTP, HTTPS)는 자신만의 기본 포트(80, 443)을 정의할 수 있고
     2. 포트를 안 쓰면(생략하면) 그 스킴의 기본 포트를 사용한다.
 
 - 이를 통해, 역으로 포트를 쓰면, 기본 포트가 아닌 쓰여진 포트를 사용하는 것을 알 수 있습니다.
-- 추가적으로, 포트를 안 쓰면 해당 스킴의 기본 포트가 적용되기 때문에, 스킴의 기본 포트를 기재하여 사용하는 것은 권장히지 않는다고 나와 있습니다.
+
+- 추가적으로, 포트를 안 쓰면 해당 스킴의 기본 포트가 적용되기 때문에, 스킴의 기본 포트를 기재하여 사용하는 것보다는, 생략하는 것이 더 정석적인 방법이라고 나와 있습니다.
