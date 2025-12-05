@@ -13,7 +13,21 @@
 
 - 해당 문서는 IETF(인터넷 표준 만드는 집단)에서 만든 표준 문서(Standards Track) 입니다.
     - HTTPClient, 브라우저, 서버 프레임워크들은 "우리는 RFC 3986을 따른다"를 전제로 URL/URI 파서를 구현합니다.
-- 해당 문서의 **Section 3.2: Authority** 의 **Section 3.2.3: Port** 에 보면 다음과 같은 내용이 나와 있습니다.
+- 해당 문서에는 '포트'에 대한 정의부터 나와 있습니다. (**Section 3.2: Authority** 의 **Section 3.2.3: Port**)
+
+> 3.2.3.  Port
+>
+>   The port subcomponent of authority is designated by an optional port
+>   number in decimal following the host and delimited from it by a
+>   single colon (":") character.
+>   
+>   port        = *DIGIT
+
+- 호스트에 붙어있는 콜론(`:`) 뒤에 오는 숫자 부분이 "포트"서브컴포넌트다
+- "optional", 즉 생략 가능하다.
+
+
+- 또한, 다음과 같은 내용이 나와 있습니다.
 
 > ... A scheme may define a default port.  For example, the "http" scheme
    defines a default port of "80", corresponding to its reserved TCP
