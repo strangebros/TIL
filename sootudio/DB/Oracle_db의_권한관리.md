@@ -18,3 +18,48 @@ SELECT * FROM SESSION_PRIVS ORDER BY privilege;
 ```sql
 SELECT * FROM SESSION_ROLES ORDER BY role;
 ```
+
+## 2. 계정별 '함수/프로시저 생성 수정' 권한 확인
+
+- 함수는 권한 관점에서 `PROCEDURE` 카테고리로 묶입니다. (Oracle에서 `CREATE PROCEDURE` 권한이 function/procedure/package 생성에 사용됨)
+
+### 2-1. 시스템 권한(직접 grant)
+
+```sql
+SELECT grantee, privilege, admin_option
+FROM   DBA_SYS_PRIVS
+WHERE  grantee IN ('계정A','계정B')
+AND    privilege IN (
+  'CREATE PROCEDURE',
+  'CREATE ANY PROCEDURE',
+  'ALTER ANY PROCEDURE',
+  'DROP ANY PROCEDURE',
+  'EXECUTE ANY PROCEDURE'
+)
+ORDER BY grantee, privilege;
+```
+
+### 2-2. 롤을 통해 부여된 시스템 권한 
+
+```sql
+SELECT rp.grantee, rp.granted_role, sp.privilege
+FROM   DBA_ROLE_PRIVS rp
+JOIN   ROLE_SYS_PRIVS sp
+       ON rp.granted_role = sp.role
+WHERE  rp.grantee IN ('계정A','계정B')
+AND    sp.privilege IN (
+  'CREATE PROCEDURE',
+  'CREATE ANY PROCEDURE',
+  'ALTER ANY PROCEDURE',
+  'DROP ANY PROCEDURE',
+  'EXECUTE ANY PROCEDURE'
+)
+ORDER BY rp.grantee, rp.granted_role, sp.privilege;
+```
+
+해석 기준
+
+- 자기 스키마에 함수/프로시저 생성: `CREATE PROCEDURE`
+- 다른 스키마에 생성/수정: 보통 `CREATE ANY PROCEDURE`, `ALTER ANY PROCEDURE`같은 "ANY" 권한 필요
+- 수정(ALTER): 보통 자기 스키마 객체는 소유자가 ALTER 가능하지만, 타 스키마는 `ALTER ANY PROCEDURE` 필요
+- 실행: `EXECUTE` (오브젝트 권한) 또는 `EXECUTE ANY PROCEDURE`(시스템 권한)
