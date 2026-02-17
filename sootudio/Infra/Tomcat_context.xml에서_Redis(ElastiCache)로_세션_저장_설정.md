@@ -1,6 +1,7 @@
 ### 1) 상황
-레거시 톰캣 기반 서비스에서 `context.xml`에 아래와 같은 `<Manager .../>` 설정이 존재했다.  
-이 설정은 **Tomcat 세션을 로컬 메모리가 아닌 Redis(AWS ElastiCache)에 저장**하기 위한 구성이다.
+- 레거시 톰캣 기반 서비스에서 `context.xml`에 아래와 같은 `<Manager .../>` 설정이 존재했다.  
+
+- 해당 설정은 **Tomcat 세션을 로컬 메모리가 아닌 Redis(AWS ElastiCache)에 저장**하기 위한 구성이다.
 
 - 즉, 다중 서버에서 같은 Tomcat 세션을 사용하기 위해 Redis에 저장해놓았다는 뜻이다.
 
@@ -15,7 +16,7 @@
 - `nodes="...:6379 ...:6379"`
   - Redis(ElastiCache) 접속 노드 목록
 
-### 4) 주요 옵션 의미 (실무 관점)
+### 4) 주요 옵션 의미
 - `sessionKeyPrefix="_www_"`
   - Redis에 저장되는 세션 키 prefix (다른 서비스와 충돌 방지)
 - `ignorePattern=".*www\.(ico|png|gif|jpg|jpeg|swf|css|js)$"`
@@ -30,7 +31,7 @@
 - `database="0"`
   - Redis 0번 DB 사용
 
-### 5) 운영/장애 관점 체크 포인트 (중요)
+### 5) 운영/장애 관점 체크 포인트
 - **세션 직렬화(Serialization)**: Redis에 저장하려면 세션 attribute가 직렬화 가능해야 함  
   - `NotSerializableException`류 에러가 흔함
 - **Redis 연결 장애 시 영향**: 로그인/세션 조회가 Redis에 의존 → Redis 장애는 곧 서비스 장애로 이어질 수 있음
@@ -40,4 +41,3 @@
 ### 6) 결론
 이 `context.xml` 설정은 **Tomcat 다중 인스턴스/운영 환경에서 세션 공유 및 유지**를 위해  
 **Redis(AWS ElastiCache) 기반 세션 스토어**를 사용하도록 세션 매니저를 교체한 구성이다.
-``
